@@ -20,6 +20,8 @@ rm(list = ls())
 wooldridge::smoke
 ?smoke
 
+data(smoke)
+
 # De la base de datos, sacamos los datos de interes.
 ingresos <- smoke$income
 cigarros <- smoke$cigs 
@@ -175,6 +177,8 @@ abline(reg3, col = "red", lwd = 2)
 # Test de Normalidad
 residuos.reg3 <- reg3$residuals
 shapiro.test(residuos.reg3)
+
+plot(residuos.reg3)
 
 # p-value= 2.4e-12 < 5% de significancia, por tanto, se rechaza H0, los errores no se distribuyen normalmente.
 
