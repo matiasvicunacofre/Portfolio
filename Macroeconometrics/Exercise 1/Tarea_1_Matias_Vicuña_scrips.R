@@ -7,9 +7,6 @@
 #******* Universidad Alberto Hurtado    *******#
 #----------------------------------------------#
 
-# Seteamos el directorio de trabajo
-setwd("~/OneDrive - Universidad Alberto Hurtado/UNIVERSIDAD UAH/4to Año/8vo Semestre/Macroeconometría/Tareas/Tarea 1")
-
 # Librerias a utilizar
 library(readxl)
 library(lubridate)
