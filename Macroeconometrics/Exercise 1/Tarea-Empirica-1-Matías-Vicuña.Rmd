@@ -1,0 +1,288 @@
+---
+title: "Tarea Empírica 1 - Macroeconometría"
+author: "Profesor: Mauricio Tejada - Estudiante: Matías Vicuña"
+date: "16/08/2022"
+output: 
+  pdf_document: 
+    fig_caption: yes
+    latex_engine: xelatex
+    keep_tex: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+# Seteamos el directorio de trabajo
+setwd("~/OneDrive - Universidad Alberto Hurtado/UNIVERSIDAD UAH/4to Año/8vo Semestre/Macroeconometría/Tareas/Tarea 1")
+
+# Librerias a utilizar
+library(readxl)
+library(xts)
+library(lubridate)
+library(tidyverse)
+library(stargazer)
+
+# Llamamos la data
+db <- read_xlsx("datos_ejercicio_empirico_1.xlsx")
+
+# guardamos en memoria la data.
+attach(db)
+
+# Trabajamos la data como data frame.
+db_df <- as.data.frame(db)
+
+# Tranformamos la variable periodo para tener el formato
+db_df_2 <- db_df %>% 
+  mutate(Periodo = ymd(db_df$periodo))
+
+# Eliminamos la variable "periodo" por temas de comodidad de trabajo de data.
+db_df_2$Periodo <- NULL
+
+```
+
+## Desarrollo
+
+Para comenzar, desarrollamos a partir de la data *"datos_ejercicio_empirico_1.xlsx"* entregados las siguientes gráficas:
+
+1- Comenzamos con la gráfica de precios históricos de la bencina desde 1985 hasta 2022, añadimos además que esta gráfica contiene los precios ***Linealizados***, por lo que se le ha aplicado $ln()$.
+
+### Gráfico 1.1
+
+```{r plot-bencina, echo=FALSE, fig.height=4, fig.width=8}
+# Precio bencina Linealizado
+
+# Copiamos la data en un nuevo objeto para bencina
+db_bencina <- db_df_2
+
+# Eliminamos la variable "petroleo"
+db_bencina$petroleo <- NULL
+
+# Creamos el logaritmo de los precios historicos.
+db_bencina <- db_bencina %>% 
+  mutate(Log_bencina = log(db_bencina$bencina))
+
+# Nuevamente, eliminamos la variable "bencina", dejando solo la variable Log_bencina.
+db_bencina$bencina <- NULL
+db_bencina$periodo <- NULL
+
+# Pasamos la data de data frame a matrix para uso de Time-Series.
+dbts_bencina <- ts(db_bencina, start = c(1985,1), frequency = 12)
+
+# Acotamos la serie de tiempo
+dbts_bencina <- window(dbts_bencina, start = c(1990,1), end = c(2021,12))
+
+# Creamos la grafica historica de los precios de la bencina.
+  plot(
+    dbts_bencina,
+    main = "Precio Histórico Linealizado Bencina (1990-2022)",
+    xlab = "Tiempo (Meses)",
+    ylab = "Logaritmo del Precio",
+    col = "red"
+  )
+
+```
+
+Con este gráfico vemos que el precio de la bencina estos últimos años a tenido una tendencia alzista, viendo un incremento notorio desde finales de los '90 hasta comienzo del 2010, luego de ello, se ha visto que el precio de la bencina ha tomado una paridad, manteniendo una varianza bastante pareja por 10 años, hasta la llegada del 2020 dónde el impacto de la crisis sanitaria global impactó notoriamente esta constancia de precios.
+
+Ahora bien, en el caso de los precios históricos del petróleo en los mismos años se ve una semejanza en cuanto a volatilidad, varianza y fechas clave de alteración de los precios, esto da un primer vistazo a lo que en la parte 2 analizaré mas en detalle, denotando así la gran correlación que ambos bienes tienen.
+
+\newpage
+
+Siguendo el análisis anterior, en el siguiente gráfico vemos los precios del petróleo ***Linealizados***, por lo cual se observara que los datos en si son mas pequeños de lo que se aprecia en el Excel.
+
+### Gráfico 2.1
+
+```{r plot petroleo, echo=FALSE, fig.height=4, fig.width=8}
+# Precio Petroleo Linealizado
+
+# Copiamos la data en un nuevo objeto para petroleo
+db_petroleo <- db_df_2
+
+# Eliminamos la variable "bencina"
+db_petroleo$bencina <- NULL
+db_petroleo$periodo <- NULL
+
+# Creamos el logaritmo de los precios historicos.
+db_petroleo <- db_petroleo %>% 
+  mutate(Log_petroleo = log(db_petroleo$petroleo))
+
+# Nuevamente, eliminamos la variable "petroleo", dejando solo la variable Log_petroleo.
+db_petroleo$petroleo <- NULL
+
+# Pasamos la data de data-frame a matrix para uso de Time-Series.
+dbts_petroleo <- ts(db_petroleo, start = c(1985,1), frequency = 12)
+
+# Acotamos la serie de tiempo
+dbts_petroleo <- window(dbts_petroleo, start = c(1990,1), end = c(2021,12))
+
+# Creamos la grafica historica de los precios de la bencina.
+  plot(
+    dbts_petroleo,
+    main = "Precio Histórico Linealizado Petróleo (1990-2022)",
+    xlab = "Tiempo (Meses)",
+    ylab = "Logaritmo del Precio",
+    col = "blue"
+)
+
+```
+
+Analizando el gráfico vemos (al igual que en el gráfico 1) una tendencia entre finales de los '80s y comienzo de los '00s constante, manteniendo un promedio bastante lineal y una varianza similar en el tiempo, ahora, desde el 2000 hasta principios del 2010 se ve una tendencia positiva del incremento del precio. Además de ello, y al igual que en el gráfico 1, se ve entre 2010 y finales de la década una tendencia promedio bastante lineal, conservando esta dinámica hasta fines del 2019, dónde los efectos COVID distorcionó este movimiento.
+
+\newpage
+
+2- Ahora, visualizaremos como se comportan cada una de las varibles graficamente realizando una autocorrelación con 10 Regazos, con ello observaremos cuan relacionados son en el tiempo los precios de cada uno de los bienes.
+
+Comenzaremos viendo la gráfica del precio del petróleo linealizado en el mismo tramo temporal que en la pregunta 1 (1985-2022).
+
+### Gráfica 1.2
+
+```{r plot autocorrelacion petroleo, echo=FALSE, fig.height=4, fig.width=8}
+# Precio del Petroleo (Linealizado)
+
+# Transformamos la matriz a data frame
+db_ts_petr <- as.data.frame(dbts_petroleo)
+
+# Eliminamos la variable periodo
+db_ts_petr$periodo <- NULL
+
+# Transformamos la nueva data en Time-Series
+db_ts_petr <- ts(db_ts_petr, start = c(1990,1), frequency = 12)
+
+# Correlación del Precio del Petroleo Linealizado
+acf(
+  db_ts_petr,
+  lag.max = 10,
+  type = "correlation",
+  plot = TRUE,
+  main = "Correlación del Precio del Petróleo",
+  xlab = "Rezagos",
+  ylab = "Correlación"
+)
+
+```
+
+Se puede observar en la gráfica 1.2 el como en el tiempo la correlación que tiene el precio con el precio pasado del petróleo mantiene una correlación cercana a 1, por lo que podemos concluir que el precio del mismo tiene una alta dependencia de su mismo pasado para el precio futuro.
+
+Ahora observaremos también la gráfica de autocorrelación pero del precio de la bencina, con ella obtendremos conclusiones muy similares a la gráfica anterior.
+
+### Gráfica 2.2
+
+```{r plot autocorrelacion Bencina, echo=FALSE, fig.height=4, fig.width=8}
+# Precio de la bencina (Linealizado)
+
+# Transformamos la matriz a data frame
+db_ts_benc <- as.data.frame(dbts_bencina)
+
+# Eliminamos la variable periodo
+db_ts_benc$periodo <- NULL
+
+# Transformamos la nueva data en Time-Series
+db_ts_benc <- ts(db_ts_benc, start = c(1990,1), frequency = 12)
+
+# Correlación del Precio de la bencina Linealizado
+acf(
+  db_ts_benc,
+  lag.max = 10,
+  type = "correlation",
+  plot = TRUE,
+  main = "Correlación del Precio de la Bencina",
+  xlab = "Rezagos",
+  ylab = "Correlación"
+)
+
+```
+
+\newpage
+
+Continuando al gráfico anterior, se logra ver los precios pasado de la bencina tiene una directa relación sobre el precio del futuro del mismo, esto ya que se ve con 10 de rezasgo, que la autocorrelación hasta el último periodo de rezago sigue siendo mayor o igual a 0.8.
+
+3- Transformando nuestra data con la primera diferencia, podremos apreciar un efecto de "ruido" en las series de tiempo particulares, comenzaremos visualizando la primera diferencia del logaritmo natural del petróleo:
+
+### Gráfico 1.3
+
+```{r plot diff petroleo, echo=FALSE, fig.height=4, fig.width=8}
+# Primera diferencia de log(petroleo)
+dif_petroleo <- diff(db_ts_petr, lag = 1)
+
+plot(dif_petroleo, main = "Primera diferencia del Petroleo", xlab = "Tiempo (Meses)", ylab = "Log(Petróleo)", col = "red")
+
+```
+
+Se logra observar que la serie de tiempo posee una estructura con media bastante constante, una varianza del mismo modo semejante en "casi" todos los periodos, es por eso que se aprecia que las variaciones (descontando la tendencia) son en cierta forma con una estructura estacionaria de la misma forma en todos los periodos.
+
+### Gráfico 2.3
+
+```{r plot diff bencina, echo=FALSE, fig.height=4, fig.width=8}
+# Primera diferencia de log(bencina)
+dif_bencina <- diff(db_ts_benc, lag = 1)
+
+plot(dif_bencina,main = "Primera diferencia de la Bencina", xlab = "Tiempo (Meses)", ylab = "Log(Bencina)", col = "blue")
+
+```
+
+Al igual que en gráfico anterior, se ve un ajuste de la varianza por la estacionariedad de la muestra, por lo que se denota visiblemente que la media y la varianza se comportan de manera ciertamente constante.
+
+\newpage
+
+4- Ahora, considerando las primeras diferencias de ambos bienes, se visualizará la autocorrelación de las primeras diferencias, apreciando un cambio notorio en la correlación de periodos anteriores, para ello, se considerará un límite de 10 rezagos por cada autocorrelación.
+
+### Gráfica 1.4
+
+```{r, plot autocorrelación diff petroleo, echo=FALSE, fig.height=4, fig.width=8}
+# ACF de la primera diferencia del petroleo
+acf(
+  dif_petroleo,
+  lag.max = 10,
+  type = "correlation",
+  plot = TRUE,
+  main = "Correlación Primera Diferencia del Petroleo",
+  xlab = "Rezagos",
+  ylab = "Correlación"
+)
+
+```
+
+En esa gráfica de autocorrelación se percibe un gran cambio sobre la misma gráfica del punto 1.2, ahora, desde el primer periodo de rezago en adelante, se nota como la correlación en el precio del presente sobre el precio pasado es casi nula, desde la segunda ya se denota una correlación negativa.
+
+### Gráfica 2.4
+
+```{r, plot autocorrelación diff bencina, echo=FALSE, fig.height=4, fig.width=8}
+# ACF de la primera diferencia de la bencina
+acf(
+  dif_bencina,
+  lag.max = 10,
+  type = "correlation",
+  plot = TRUE,
+  main = "Correlación Primera Diferencia de la Bencina",
+  xlab = "Rezagos",
+  ylab = "Correlación"
+)
+
+```
+
+Al igual que en el gráfico anterior, se ve como la correlación por cada rezago posterior va disminuyendo llegando a puntos negativos, es decir que, el precio futuro de la bencina no tiene relación o influencias por el precio pasado del mismo.
+
+\newpage
+
+5- Luego de todo el análisis anterior hecho de la data, se mostrará de manera gráfica en formato anual las mismas gráficas presentadas en el punto 1.1 y 1.2, pero con una diferencia notoría de suavización de las líneas dado que se agrupan los datos en formato anual.
+
+### Gráfico 1.5
+
+```{r, ploteo anual bencina, echo=FALSE, fig.height=4, fig.width=8}
+# Datos Promedio Anual de la Bencina
+anual_ts_bencina <- aggregate(db_ts_benc, nfrequency = 1, FUN = mean)
+
+plot(anual_ts_bencina, main = "Promedio Anual Linealizado de la Bencina", ylab = "Log(Bencina)", xlab = "Tiempo en años", col = "blue")
+
+```
+
+\vspace{3mm}
+
+### Gráfica 2.5
+
+```{r, ploteo anual petroleo, echo=FALSE, fig.height=4, fig.width=8}
+# Datos Promedio Anual del Petróleo
+anual_ts_petroleo <- aggregate(db_ts_petr, nfrequency = 1, FUN = mean)
+
+plot(anual_ts_petroleo, main = "Promedio Anual Linealizado del Petróleo", ylab = "Log(Petroleo)", xlab = "Tiempo en años", col = "red")
+
+```

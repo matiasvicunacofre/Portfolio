@@ -1,0 +1,179 @@
+---
+title: "Tarea Empírica 2 - Macroeconometría"
+author: "Profesor: Mauricio Tejada - Estudiante: Matías Vicuña"
+date: "30/07/2022"
+output:
+  pdf_document: 
+    fig_height: 4
+    fig_crop: no
+    latex_engine: xelatex
+    keep_tex: yes
+---
+
+```{r, setup, echo=FALSE, include=FALSE}
+#----------------------------------------------#
+#******* Tarea Empírica 2               *******#
+#******* Macroeconometría               *******#
+#******* Profesor: Mauricio Tejada      *******#
+#******* Ayudante: Diego Trauranca      *******#
+#******* Estudiante: Matías Vicuña      *******#
+#******* Universidad Alberto Hurtado    *******#
+#----------------------------------------------#
+
+# Seteamos las librerías a utilizar
+library(dynlm)
+library(tidyverse)
+library(readxl)
+library(stargazer)
+library(dygraphs)
+
+# Seteamos nuestro directorio
+setwd("~/OneDrive - Universidad Alberto Hurtado/UNIVERSIDAD UAH/4to Año/8vo Semestre/Macroeconometría/Tareas/Tarea 2")
+
+# Generamos la base de datos
+db <- read_xlsx("datos_ejercicio_empirico_2.xlsx")
+
+# Guardamos en la memoria
+attach(db)
+
+# Eliminamos variable year
+db$year = NULL
+
+# Generamos la serie de tiempo con la data
+db_ts <- ts(db, start = c(1981,1), frequency = 12)
+```
+
+# Desarrollo
+
+## Pregunta 1
+
+```{r P1 - Grafico, echo=FALSE, fig.height=4, fig.width=8}
+#******* Parte 1 *******#
+
+# Usamos la data y creamos una nueva data con las variables de interés.
+db_1 <- db %>% 
+  select(beltlaw,spdlaw)
+
+# Transformamos a Time Series
+db_1_ts <- ts(db_1, start = c(1981,1), frequency = 12)
+
+# Gráfica muestral.
+plot(db_1_ts, main = "Efectos de Aplicación de la Ley de Cinturón y Velocidad Límite", xlab = "Periodo en Años", col = "black")
+
+```
+
+Respuesta: se puede observar que la ley del cinturón de seguridad entró en vigor en Diciembre de 1985, de ahí hasta Enero de 1986 se vió el efecto de esta ley en vigor. En el caso de la ley de velocidad, esta se aprecia que entro en vigor en Abril de 1987, en donde subió hasta Mayo del mismo año.
+
+## Pregunta 2
+
+```{r Tabla 1 - Regresión con tendencia, echo=FALSE, results='asis'}
+#******* Parte 2 *******#
+# Regresion del modelo de ts con ajuste de tendencia.
+regress1 <- dynlm(log(totacc) ~ trend(db_ts), data = db_ts)
+
+# Tabla de datos de la regresión
+stargazer(regress1, type = "latex", no.space = TRUE, single.row = FALSE,  intercept.bottom = FALSE, 
+          digits = 2, keep.stat = c("n", "rsq"))
+
+```
+
+Respuesta: Corrigiendo por la tendencia que, el número de accidentes totales en términos porcentuales se explican por la tendencia con un aumento de aprox 3,4%. siendo esta estadísticamente significativa con 99% de confianza. He de decir también que el modelo contempla un $R^2$ significativo de 0,67 aproximadamente.
+
+```{r Gráfica 2 de los Residuos, echo=FALSE, fig.height=3, fig.width=6, echo=FALSE}
+# Grafico de los Residuos
+plot(
+  regress1$residuals,
+  main = "Gráfico de los Residuos",
+  xlab = "Tiempo (Meses)",
+  ylab = "Residuos",
+  col = "blue"
+)
+
+```
+
+Continuación Respuesta: Se aprecia en el gráfico de los residuos que no hay una varianza ni un promedio constante, por lo cual la aletoriedad del mismo modelo evidencia ciclos muy dispersos, teniendo como por ejemplo, el efecto a la baja en 1982 teniendo en el corto plazo una alza significativa, lo que denota el efecto de inexistencia de varianza constante.
+
+\newpage
+
+## Pregunta 3
+
+```{r Tabla 2, echo=FALSE, results='asis'}
+#******* Parte 3 *******#
+# regresion del modelo de ts con datos regulares
+regress2 <-
+  dynlm(log(totacc) ~ trend(db_ts) + spdlaw + beltlaw + unem + wkends, data = db_ts)
+
+stargazer(regress2, type = "latex", no.space = TRUE, single.row = FALSE,  intercept.bottom = FALSE, 
+          digits = 2, keep.stat = c("n", "rsq"))
+
+```
+
+El efecto del desempleo establece un efecto negativo dentro del modelo, por lo que, al aumentar en un punto el desempelo, el total de accidentes disminuiría, por lo que no es aplicable a la realidad contemporanéa. Ahora el modelo dado que contempla más variables que controlan la variable explicada, su $R^2$ paso a ser 0.8, por lo que este modelo en si explica bastante sobre el número porcentual de accidentes.
+
+```{r Gráfico 2, echo=FALSE, fig.height=3, fig.width=6}
+# grafico de los residuos
+plot(regress2$residuals,
+  main = "Gráfico de los Residuos",
+  xlab = "Tiempo (Meses)",
+  ylab = "Residuos",
+  col = "red"
+  )
+
+```
+
+Continuación Respuesta: Al igual que en el gráfico de residuo de la regresión anterior, este modelo tiene una media y una varianza no constante, por lo que los efectos ciclicos que hay dentro de la muestra no contemplan un punto medio, sino que aleatoriza los efectos que se logran observar.
+
+## Pregunta 4
+
+```{r Tabla 3, echo=FALSE, results='asis'}
+stargazer(regress2, type = "latex", no.space = TRUE, single.row = FALSE,  intercept.bottom = FALSE, 
+          digits = 2, keep.stat = c("n", "rsq"))
+
+```
+
+Respuesta: En la variable de $spdlaw$ hay un efecto esperado, que es al haberse aplicado esta ley, el porcentaje de accidentes disminuye un 6% aproximadamente, pero, en el apartado de la variable $beltlaw$ se ve un efecto contrario, esto puede ser explicado de modo que, al ser obligatorio el uso de accidentes, el efecto que se generó no fue si no el que los conductores se sintieran más seguros a la hora de conducir, y por lo mismo, generó una mayor irresponsabilidad al momento de las precauciones al realizar la actividad, lo que genera un mayor porcentaje de accidentes dada la aplicación de esta ley, concretamente, un 7% más aproximadamente.
+
+\newpage
+
+## Pregunta 5
+
+```{r Tabla 4, echo=FALSE, results='asis'}
+#******* Parte 5 *******#
+
+regress3 <-
+  dynlm(prcfat ~ trend(db_ts) + spdlaw + beltlaw + unem + wkends, data = db_ts)
+
+stargazer(regress3, type = "latex", no.space = TRUE, single.row = FALSE,  intercept.bottom = FALSE, 
+          digits = 2, keep.stat = c("n", "rsq"))
+
+```
+
+Respuesta: Ahora se logra ver que, al evaluar la variable $prcfat$, el efecto en $spdlaw$ y $beltlaw$ es totalmente diferente, esto se explica dado que, a la hora de aplicarse la ley del cinturón, este trajo consigo un efecto de disminución de accidentes en dónde hubiera al menos un muerto, aproximadamente fue un 5% de reducción de estos tipos de accidentes dada la ley. En cambio, para la ley de velocidad máxima, el efecto fue contrario, habiendo un aumento del 8% de los accidentes con al menos un fallecido al haberse aplicado esta ley.
+
+```{r regress 3, echo=FALSE, fig.height=3, fig.width=6}
+plot(regress3$residuals,
+  main = "Gráfico de los Residuos",
+  xlab = "Tiempo (Meses)",
+  ylab = "Residuos",
+  col = "purple"
+)
+
+```
+
+Continuación Respuesta: Al igual que en las otras veces, se ve grandes cambios ciclicos, pero esta vez con un efecto que gráficamente pareciera seguir un patrón, se ve que hay un punto contemporáneo tal en cada año en dónde los accidentes con al menos un fallecido tiene un incremento dado los residuos del modelo.
+
+\newpage
+
+## Pregunta 6
+
+```{r Tabla 5, echo=FALSE, results='asis'}
+#******* Parte 6 *******#
+
+regress4 <- dynlm(log(totacc) ~ season(db_ts) + trend(db_ts), data = db_ts)
+
+stargazer(regress4, type = "latex", no.space = TRUE, single.row = FALSE,  intercept.bottom = FALSE, 
+          digits = 2, keep.stat = c("n", "rsq"))
+
+```
+
+Respuesta: Al momento de realizar la regresión con las dummies de los meses (descontando enero) y ajustando por tendendia, se observa que, gran candidad de variables dummy (además de la tendencia) son estadísticamente significativas, por lo cuál explican gran parte de los efectos de la cantidad de accidentes que hay, a lo cuál se puede concluir que si hay estacionalidad presente en el modelo que explica el número de accidentes en cada época del año.

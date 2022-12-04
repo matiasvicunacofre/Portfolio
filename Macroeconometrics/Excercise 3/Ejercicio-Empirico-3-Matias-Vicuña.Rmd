@@ -1,0 +1,290 @@
+---
+title: "Tarea - Ejercicio Empírico 3"
+author: "Profesor: Mauricio Tejada - Estudiante: Matías Vicuña"
+date: "26/09/2022"
+output: pdf_document
+---
+
+```{r setup, echo=FALSE, include=FALSE}
+# Seteamos las librerías a utilizar
+library(dynlm)
+library(tidyverse)
+library(readxl)
+library(stargazer)
+library(dygraphs)
+library(forecast)
+library(AER)
+library(knitr)
+library(kableExtra)
+
+# Seteamos nuestro directorio
+setwd("~/OneDrive - Universidad Alberto Hurtado/UNIVERSIDAD UAH/4to Año/8vo Semestre/Macroeconometría/Tareas/Ejercicio Empírico 3")
+
+# Generamos la base de datos
+db <- read_xlsx("datos_ejercicio_empirico_3.xlsx")
+
+# Guardamos en la memoria
+attach(db)
+
+
+```
+
+# Parte 1
+
+### Gráfico 1.1
+
+```{r parte 1 grafica 1, echo=FALSE, fig.height=3, fig.width=6, fig.align='center'}
+#******* Parte 1 *******#
+
+# Generamos la Time-Series
+ipm.ts <- ts(db$IPM, start = c(2009,1), frequency = 12)
+
+lipm.ts <- log(ipm.ts)
+
+dif.lipm <- diff(lipm.ts, lag = 1)
+
+# Graficamos la variable lipm y diff(lipm)
+plot(lipm.ts,
+  main = "Índice Producción Manufacturero Linealizado",
+  ylab = "ln(IPM)",
+  xlab = "Tiempo en Meses",
+  col = "blue")
+# Respuesta: Claro efecto de tendencia creciente.
+```
+
+### Gráfico 1.2
+
+```{r parte 1 grafica 2, echo=FALSE, fig.height=3, fig.width=6, fig.align='center'}
+plot(dif.lipm,
+  main = "Diferencia - Índice Producción Manufacturero",
+  ylab = "dif(ln(IPM))",
+  xlab = "Tiempo en Meses",
+  col = "red")
+# Respuesta: Hay presencia de caminata aleatoria, además de varianza constante.
+
+```
+
+\newpage
+
+# Parte 2
+
+## Modelos Autoregresivos
+
+Ahora presentamos el modelo Autoregresivo (AR), la cual en el modelo autoregresivo de $p$ rezagos se define como:
+
+```{=latex}
+\begin{large}
+
+$$
+AR(p) = y_t = \beta_0 + \beta_1 y_{t-1} + \beta_2 y_{t-2} + ... + \beta_p y_{t-p} + u_t
+$$
+
+\end{large}
+```
+Ahora, construimos los modelos desde el $AR(1)$ al $AR(8)$:
+
+```{r parte 2 tabla 1, echo=FALSE, fig.align='center', results='asis'}
+#******* Parte 2 *******#
+# Modelo AR(1)
+ar1.ts <- dynlm(dif.lipm~L(dif.lipm))
+# Modelo AR(2)
+ar2.ts <- dynlm(dif.lipm~L(dif.lipm, 1:2))
+# Modelo AR(3)
+ar3.ts <- dynlm(dif.lipm~L(dif.lipm, 1:3))
+
+stargazer(ar1.ts,ar2.ts,ar3.ts, type = "latex",no.space = TRUE, header = FALSE,column.labels = c("AR(1)","AR(2)","AR(3)"), keep.stat = c("adj.rsq","f","ser"), model.numbers = FALSE, title = "Modelo AR(1), AR(2) y AR(3)")
+
+```
+
+\newpage
+
+```{r parte 2 tabla 2, echo=FALSE, fig.align='center', results='asis'}
+#******* Parte 2 *******#
+# Modelo AR(4)
+ar4.ts <- dynlm(dif.lipm~L(dif.lipm, 1:4))
+# Modelo AR(5)
+ar5.ts <- dynlm(dif.lipm~L(dif.lipm, 1:5))
+# Modelo AR(6)
+ar6.ts <- dynlm(dif.lipm~L(dif.lipm, 1:6))
+
+stargazer(ar4.ts,ar5.ts,ar6.ts, type = "latex",no.space = TRUE, header = FALSE,column.labels = c("AR(4)","AR(5)","AR(6)"), keep.stat = c("adj.rsq","f","ser"), model.numbers = FALSE, title = "Modelo AR(4), AR(5) y AR(6)")
+
+```
+
+\newpage
+
+```{r parte 2 tabla 3, echo=FALSE, fig.align='center', results='asis'}
+#******* Parte 2 *******#
+# Modelo AR(7)
+ar7.ts <- dynlm(dif.lipm~L(dif.lipm, 1:7))
+# Modelo AR(8)
+ar8.ts <- dynlm(dif.lipm~L(dif.lipm, 1:8))
+
+stargazer(ar7.ts,ar8.ts, type = "latex",no.space = TRUE, header = FALSE,column.labels = c("AR(7)","AR(8)"), keep.stat = c("adj.rsq","f","ser"), model.numbers = FALSE, title = "Modelo AR(7) y AR(8)")
+
+```
+
+Finalizamos comprobando cual de los modelos se ajusta mejor, para ello usamos el método $AIC$, que se determina con la siguiente formula:
+
+```{=latex}
+\begin{large}
+
+$$
+AIC(p) = ln\Bigg(\frac{SRC(p)}{T}\Bigg) + (p+1)\frac{2}{T}
+$$
+
+\end{large}
+```
+\newpage
+
+```{r parte 2 aic, echo=FALSE}
+# Comparación de los AR con el criterio de Akaike
+
+aic.test <- data.frame(AIC = c(extractAIC(ar1.ts),extractAIC(ar2.ts),
+  extractAIC(ar3.ts),extractAIC(ar4.ts),
+  extractAIC(ar5.ts),extractAIC(ar6.ts),
+  extractAIC(ar7.ts),extractAIC(ar8.ts)))
+
+AIC <- c(aic.test[2,],aic.test[4,],aic.test[6,],aic.test[8,],aic.test[10,],aic.test[12,],aic.test[14,],aic.test[16,])
+
+Models <- c("AR(1)","AR(2)","AR(3)","AR(4)","AR(5)","AR(6)","AR(7)","AR(8)")
+
+AIC.db <- data.frame(cbind(Models,AIC))
+AIC.db
+
+```
+
+Viendo el resultado que nos arroja AIC, concluimos que la afirmación es correcta, dado que el valor mínimo se presenta en el modelo de AR(6).
+
+\vspace{2mm}
+
+# Parte 3
+
+```{r parte 3, echo=FALSE}
+#******* Parte 3 *******#
+# Ahora usamos la autoregresión con 6 rezagos para evaluar y hacer el test de Hipotesis para verficar si es que nuestro modelo autoregresivo es significante o no.
+
+# usamos el siguiente modelo:
+ar6.ts <- dynlm(dif.lipm~L(dif.lipm, 1:6))
+
+# Ahora, hacemos nuestro test de hipótesis:
+test.f.ar6.dif <- linearHypothesis(ar6.ts, c("L(dif.lipm, 1:6)5 = 0", "L(dif.lipm, 1:6)6 = 0"))
+
+test.f.ar6.dif
+
+# Respuesta: al realizar el test de hipotesis F, se rechaza la hipotesis nula con un 0,000009465 de Pr(>F) sobre la hipotesis alternativa, es decir, el modelo autoregresivo con 6 periodos es significante.
+```
+
+Respuesta: Según lo que nos entregó la hipótesis, se rechaza la hipótsis nula y comprobamos que el mejor modelo es el AR(6).
+
+\vspace{2mm}
+
+# Parte 4
+
+Generamos la predicción usando la función *predict*, en dónde para las predicciones $j$ periodos adelante se determina de la siguiente forma:
+
+```{=latex}
+\begin{large}
+
+$$
+y_{T+j|T} = \phi_0(1+\phi_1+\phi_1^2+...+\phi^{j-1})+\phi_1^j y_T
+$$
+
+\end{large}
+```
+\vspace{5mm}
+
+```{r parte 4.1, echo=FALSE}
+#******* Parte 4 *******#
+# Primero definimos el modelo AR(6) Estimado
+ar.6.dif.hat <- ar(dif.lipm, start = c(2009,1), order.max = 6)
+
+# Formulamos la predicción con 5 periodos siguientes.
+predict <- predict(ar.6.dif.hat, n.ahead = 5)
+
+prediccion <- c(predict$pred[1], predict$pred[2], predict$pred[3], predict$pred[4], predict$pred[5])
+
+fecha <- c("Aug 2022", "Sep 2022", "Oct 2022", "Nov 2022", "Dec 2022")
+
+prediccion.list <- data.frame(cbind(fecha,prediccion))
+prediccion.list
+
+
+```
+
+```{r parte 4.2, include=FALSE}
+# Luego de ello, hacemos la predicción del modelo con 5 periodos de interés (Aug, Sep, Oct, Nov, Dec) del 2022.
+
+dif.aug <- predict$pred[1] # Intercepto Agosto de la predicción
+dif.aug
+
+dif.sep <- predict$pred[2] # Intercepto Septiembre de la predicción
+dif.sep
+
+dif.oct <- predict$pred[3] # Intercepto Octubre de la predicción
+dif.oct
+
+dif.nov <- predict$pred[4] # Intercepto Noviembre de la predicción
+dif.nov
+
+dif.dic <- predict$pred[5] # Intercepto Diciembre de la predicción
+dif.dic
+
+```
+
+\newpage
+
+# Parte 5
+
+Usando los valores que obtuvimos de la predicción en la parte anterior, realizamos unos calculos para lograr conseguir el índice de diciembre de 2022.
+
+\vspace{5mm}
+
+```{=latex}
+\begin{large} $IPM_{dic22}$: \end{large}
+```
+```{r parte 5, echo=FALSE}
+#******* Parte 5 *******#
+# Para poder realizar el modelo autoregresivo debemos de usar el modelo con la proyección de los 5 periodos faltantes del año 2022
+
+lipm.aug.ts <- lipm.ts[163]+dif.aug 
+# Empezamos desde Julio del 2022 y vamos usando nuestro coeficiente proyectado 
+
+lipm.sep.ts <- lipm.aug.ts+dif.sep 
+# Usamos el valor calculado anterior sumando el coefciente proyectado de septiembre
+
+lipm.oct.ts <- lipm.sep.ts+dif.oct 
+# al igual que la anterior, usamos el objeto calculado anterior y le agregamos el valor proyectado de octubre.
+
+lipm.nov.ts <- lipm.oct.ts+dif.nov
+# mismo procedimiento, esta vez para el valor de noviembre proyectado
+
+lipm.dec.ts <- lipm.nov.ts+dif.dic
+# Finalizamos calculando el valor estimado de noviembre con la proyección del forecast de diciembre
+
+# Por último, hacemos el valor del índice para diciembre del 2022.
+dec.ts.ipm <- exp(lipm.dec.ts)
+dec.ts.ipm
+```
+
+\vspace{3mm}
+
+# Parte 6
+
+Luego de hacer todos los calculos anteriores y definir el índice del año 2022, usamos el método *ar* y *forecast* para desarrollarlo, mostraré los códigos a usar y desarrollar.
+
+\vspace{3mm}
+
+```{r parte 6, echo=TRUE, include=TRUE}
+#******* Parte 6 *******#
+
+reg <- ar(dif.lipm, order.max = 8, aic = TRUE)
+reg$aic
+
+reg_final <- ar(dif.lipm, order.max = 6)
+resultados <- forecast(reg_final, h = 5, level = 0.95)
+resultados
+
+# Respuesta: Se llega a los mismo resultados anteriormente conseguidos en el apartado 4, comprobando su veracidad y precisión.
+
+```

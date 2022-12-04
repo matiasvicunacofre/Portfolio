@@ -1,0 +1,393 @@
+---
+title: "Ejercicio Empírico 5 - Macroeconometría"
+author: "Profesor: Mauricio Tejada - Estudiante: Matías Vicuña"
+date: "06/11/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+# Seteamos las librerías a utilizar
+library(dynlm)
+library(tidyverse)
+library(readxl)
+library(stargazer)
+library(dygraphs)
+library(forecast)
+library(AER)
+library(urca)
+library(vars)
+
+# Seteamos el directorio de trabajo de nuestro script
+setwd("~/OneDrive - Universidad Alberto Hurtado/UNIVERSIDAD UAH/4to Año/8vo Semestre/Macroeconometría/Tareas/Ejercicio Empirico 5")
+
+# Procedemos a cargar la data
+db <- read_xls("Datos_Blanchard_Quah.xls")
+db
+
+attach(db)
+
+# Generamos las series de tiempo
+unrate <-
+  ts(
+    db$unrate,
+    start = c(1950, 2),
+    end = c(1987, 4),
+    frequency = 4
+  )
+
+unrate <- window(unrate, start = c(1950,3), end = c(1987, 4))
+
+gnp <- ts(
+  db$gnp,
+  start = c(1950, 2),
+  end = c(1987, 4),
+  frequency = 4
+)
+
+# Series de tiempo linealizadas
+lgnp.t <- log(gnp)
+lunrate.t <- log(unrate)
+
+# Transformamos la data en la primera diferencia linealizada de cada una
+dlgnp.t <- diff(log(gnp), 1)
+dlunrate.t <- diff(log(unrate), 1)*100
+
+# la agrupamos en una data
+data <- ts.union(lunrate.t, dlgnp.t, dframe = FALSE)
+
+```
+
+\vspace{2mm}
+
+# Grafica de Los Datos Agrupados
+
+```{r grafica agrupado, echo=FALSE, fig.height=4, fig.width=8}
+# visualizamos la data linealizada
+plot(
+  data,
+  col = "blue",
+  main = "Primeras diferencias linealizadas",
+  xlab = "Tiempo (Trimestral)",
+  lwd = 2
+)
+
+```
+
+# Parte 1
+
+```{r parte1.1, echo=FALSE}
+#********************** PARTE 1 **********************#
+# Verificacion de estacionariedad mediante test de raiz unitaria.
+
+# TEST UNRATE modelo 3
+test.unrate.ur <-
+  ur.df(
+    unrate,
+    type = c("trend"),
+    lags = 1,
+    selectlags = c("AIC")
+  )
+summary(test.unrate.ur)
+
+# TEST UNRATE modelo 2
+test.unrate.ur.2 <-
+  ur.df(
+    unrate,
+    type = c("drift"),
+    lags = 1,
+    selectlags = c("AIC")
+  )
+summary(test.unrate.ur.2)
+
+# TEST UNRATE modelo 1
+test.unrate.ur.1 <-
+  ur.df(
+    unrate,
+    type = c("none"),
+    lags = 1,
+    selectlags = c("AIC")
+  )
+summary(test.unrate.ur.1)
+
+ndiffs(unrate, type = c("trend"))
+# Conclusiones, tenemos que nuestro test de raiz unitaria de unrate es de orden de integracion 1, por lo que si hay estacionariedad.
+
+```
+
+\vspace{2mm}
+
+Conclusiones, tenemos que nuestro test de raiz unitaria de unrate es de orden de integracion 1, por lo que si hay estacionariedad.
+
+```{r parte1.2, echo=FALSE}
+# TEST GNP
+test.gnp.ur <-
+  ur.df(
+    gnp,
+    type = c("trend"),
+    lags = 1,
+    selectlags = c("AIC")
+  )
+summary(test.gnp.ur)
+
+# TEST GNP modelo 2
+test.gnp.ur.2 <-
+  ur.df(
+    gnp,
+    type = c("drift"),
+    lags = 1,
+    selectlags = c("AIC")
+  )
+summary(test.gnp.ur.2)
+
+# TEST GNP modelo 1
+test.gnp.ur.1 <-
+  ur.df(
+    gnp,
+    type = c("none"),
+    lags = 1,
+    selectlags = c("AIC")
+  )
+summary(test.gnp.ur.1)
+
+ndiffs(gnp, type = c("trend"))
+
+```
+
+Conclusiones, tenemos que nuestro test de raiz unitaria de gnp es de orden de integracion 1, por lo que si hay estacionariedad.
+
+# Parte 2
+
+Para comenzar, evaluamos un modelo estándar de VAR(1)
+
+```{r parte2.1, echo=FALSE}
+#********************** PARTE 2 **********************#
+# Estimacion de modelo VAR simplificado, evaluando estabilidad y ruido blanco
+# Procedemos a usar la matriz "data" para nuestra estimacion del VAR.
+
+# Modelo VAR reducido
+VAR.1 <- VAR(y = data, p = 1)
+coef(VAR.1)
+
+```
+
+\vspace{2mm}
+
+```{r parte2.2, echo=FALSE}
+# Estimacion del mejor numero de rezagos mediante criterio de informacion AIC
+VARselect(y = data,
+  lag.max = 12,
+  season = 4,
+  type = "const")
+```
+
+Comprobamos que nuestro mejor modelo de VAR es tomando en cuenta 6 rezagos como max segun el criterio de minimizacion de AIC.
+
+Generamos nuestro nuevo modelo VAR(6):
+
+```{r parte2.grafica, echo=FALSE}
+VAR.1.opt <- VAR(y = data,
+  p = 6 ,
+  type = "const")
+summary(VAR.1.opt)
+
+```
+
+\newpage
+
+Ahora, generamos una grafica de estabilidad de las raices del modelo, en donde comprobamos que al ser todos \<1, es estable.
+
+```{r parte.2.estabilidad, echo=FALSE, fig.height=4, fig.width=8}
+# Estabilidad del VAR (VAR Óptimo (VAR 6))
+barplot(
+  roots(VAR.1.opt),
+  ylim = c(0, 1),
+  main = "Estabilidad: Raíces de Polinomio Característico",
+  names.arg = as.character(1:12)
+)
+abline(h = 1,
+  col = "red",
+  lty = 2,
+  lwd = 2)
+# Conclusion: al ser todos los polinomios caracteristicos del modelo menores a 1, comprobamos que nuestro modelo VAR si presenta estabilidad.
+
+```
+
+Conclusion: al ser todos los polinomios caracteristicos del modelo menores a 1, comprobamos que nuestro modelo VAR si presenta estabilidad.
+
+\vspace{2mm}
+
+Para comprobar la normalidad del modelo, usamos la función *"normality.test"*
+
+```{r test.normalidad, echo=FALSE}
+# Normalidad de los errores, pruebas de distribución
+normalidad <- normality.test(VAR.1.opt)
+normalidad
+
+# H0 = Los errores distribuyen normalmente. > 0.05
+# H1 = Los errores no distribuyen con normalidad. < 0.05
+# Conclusión: Tenemos que la prueba Skewness con p-value de 0.885, por tanto, rechazamos hipotesis alternativa, los errores se distribuyen normal.
+
+```
+
+H0 = Los errores distribuyen normalmente. \> 0.05
+
+H1 = Los errores no distribuyen con normalidad. \< 0.05
+
+Conclusión: Tenemos que la prueba Skewness con p-value de 0.885, por tanto, rechazamos hipotesis alternativa, los errores se distribuyen normal.
+
+## Gráficos de Residuos del Modelo
+
+```{r plot1residuo, echo=FALSE, fig.height=4, fig.width=8}
+# Errores del modelo VAR(4)
+u <- resid(VAR.1.opt)
+
+ts.plot(u[,1], xlab = "Trimestres", ylab = "Errores", 
+  main = "Error de Unrate", col = "blue", lwd = 2)
+abline(h = 0, lwd = 2.5, col = "red")
+
+```
+
+```{r plot2residuos, echo=FALSE, fig.height=4, fig.width=8}
+ts.plot(u[,2], xlab = "Trimestres", ylab = "Errores", 
+  main = "Errores de GNP", col = "blue", lwd = 2)
+abline(h = 0, lwd = 2.5, col = "red")
+
+```
+
+\newpage
+
+# Parte 3
+
+```{r parte3.irfi, echo=FALSE, include=FALSE}
+#********************** PARTE 3 **********************#
+# Impulso = unrate; Respuesta = gnp
+
+# Generamos la matriz con diagonal inferior izquierda.
+b <- diag(1,2)
+b[lower.tri(b)] <- NA
+
+var.opt.model.b <- SVAR(VAR.1.opt, Bmat = b)
+
+var.opt.model.b$B
+
+irf.i <-
+  irf(
+    var.opt.model.b,
+    impulse = "lunrate.t",
+    response = "dlgnp.t",
+    n.ahead = 24,
+    ortho = TRUE
+  )
+```
+
+## Grafico 1
+
+```{r plot.irfi, echo=FALSE, fig.height=5, fig.width=10}
+plot(irf.i,
+  main = "Impulso = Tasa de Desempleo; Respuesta = Crecimiento producto nacional bruto",
+  ylab = "Log(GNP)",
+  lwd = 2)
+
+```
+
+```{r parte3, echo=FALSE, include=FALSE}
+irf.ii <-
+  irf(
+    var.opt.model.b,
+    impulse = "dlgnp.t",
+    response = "lunrate.t",
+    n.ahead = 24,
+    ortho = TRUE
+  )
+```
+
+## Grafico 2
+
+```{r plot.irfii, echo=FALSE,fig.height=5, fig.width=10}
+plot(irf.ii,
+  main = "Impulso = Crecimiento producto nacional bruto; Respuesta = Tasa de Desempleo",
+  ylab = "Log(unrate)",
+  lwd = 2)
+
+```
+
+\newpage
+
+# Parte 4
+
+```{r parte4, echo=FALSE,fig.height=10, fig.width=10}
+#********************** PARTE 4 **********************#
+# Análisis de descomposición de la varianza del error de predicción:
+des.var <- fevd(var.opt.model.b, n.ahead = 12)
+
+plot(des.var, xlab = c("Horizonte","Horizonte"), 
+  ylab = c("Porcentaje","Porcentaje"), 
+  legend = c("Desempleo","Crec. PIB"),
+  main = c("Varianza Desempleo", "Varianza Crecimiento PIB"))
+```
+
+\newpage
+
+# Parte 5
+
+```{r parte5.irf1, echo=FALSE, include=FALSE}
+#********************** PARTE 5 **********************#
+
+var.opt.model.BQ <- BQ(VAR.1.opt)
+
+irf.bq <- irf(var.opt.model.BQ,
+  impulse = "lunrate.t",
+  response = "dlgnp.t",
+  n.ahead = 24,
+  ortho = TRUE
+)
+```
+
+## Gráfica 1
+
+```{r parte5.plotirf1, echo=FALSE, fig.height=5, fig.width=10}
+plot(irf.bq,
+  main = "Impulso = Tasa de Desempleo; Respuesta = Crecimiento producto nacional bruto",
+  ylab = "Log(GNP)",
+  lwd = 2)
+
+```
+
+```{r parte5.irfii, echo=FALSE, include=FALSE}
+irf.ii.bq <-
+  irf(
+    var.opt.model.BQ,
+    impulse = "dlgnp.t",
+    response = "lunrate.t",
+    n.ahead = 24,
+    ortho = TRUE
+  )
+```
+
+## Grafica 2
+
+```{r parte5.plotirf2, echo=FALSE, fig.height=5, fig.width=10}
+plot(irf.ii.bq,
+  main = "Impulso = Crecimiento producto nacional bruto; Respuesta = Tasa de Desempleo",
+  ylab = "Log(unrate)",
+  lwd = 2)
+```
+
+# Parte 6
+
+```{r parte6, echo=FALSE,fig.height=10, fig.width=10}
+#********************** PARTE 6 **********************#
+# Análisis de descomposición de la varianza del error de predicción:
+des.var.ii <- fevd(var.opt.model.BQ, n.ahead = 12)
+
+plot(des.var.ii, xlab = c("Horizonte","Horizonte"), 
+  ylab = c("Porcentaje","Porcentaje"), 
+  legend = c("Desempleo","Crec. PIB"),
+  main = c("Varianza Desempleo", "Varianza Crecimiento PIB"))
+```
+
+\newpage
+
+# Parte 7
+
+Una de las diferencias es el hecho de que al corto plazo se ven efectos mayormente denotados y pronunciados al realizarse este shock tanto de PIB como de Tasa de Desempleo. En cambio, al ver los efectos de los investgadores en el paper, el efecto que se produce por el shock es de un menor grado y sostenidamente dura menos en el tiempo, llegando a su estado estacionario facilmente.

@@ -1,0 +1,320 @@
+---
+title: "Tarea Empírica 4"
+author: "Profesor: Mauricio Tejada - Estudiante: Matías Vicuña"
+date: "12/10/2022"
+output: pdf_document
+---
+
+```{r setup, echo=FALSE, include=FALSE}
+#----------------------------------------------#
+#******* Ejercicio Empírico 4           *******#
+#******* Macroeconometría               *******#
+#******* Profesor: Mauricio Tejada      *******#
+#******* Ayudante: Diego Trauranca      *******#
+#******* Estudiante: Matías Vicuña      *******#
+#******* Universidad Alberto Hurtado    *******#
+#----------------------------------------------#
+
+rm(list = ls())
+
+# Seteamos las librerías a utilizar
+library(dynlm)
+library(tidyverse)
+library(readxl)
+library(stargazer)
+library(dygraphs)
+library(forecast)
+library(AER)
+library(urca)
+
+# Seteamos nuestro directorio
+setwd("~/OneDrive - Universidad Alberto Hurtado/UNIVERSIDAD UAH/4to Año/8vo Semestre/Macroeconometría/Tareas/Ejercicio Empirico 4")
+
+# Cargamos la base de datos
+db <- read_excel("~/OneDrive - Universidad Alberto Hurtado/UNIVERSIDAD UAH/4to Año/8vo Semestre/Macroeconometría/Tareas/Ejercicio Empirico 4/datos_ejercicio_empirico_4.xlsx", 
+  col_types = c("date", "numeric", "numeric", 
+    "numeric", "numeric", "numeric"))
+
+attach(db)
+
+
+```
+
+# Consumo
+
+Apreciamos gráficamente el $ln(Consumo)$:
+
+```{r datos consumos, echo=FALSE}
+#******* Consumo *******#
+c_ts <- ts(db$consumo, start = 1986, frequency = 4)
+# Log(Consumo)
+lg_cts <- log(c_ts)
+# Primeras diferencias
+dif_lg_cts <- diff(lg_cts, lag = 1)
+# Tendencia
+tendencia_cts <- time(lg_cts)
+
+```
+
+\vspace{1mm}
+
+Ahora, siguiendo el proceso de verificación, realizamos la prueba Dickey-Fuller para comprobar el orden de integración $I(d)$, esta prueba se define como:
+
+$$
+\Delta y_t = a_0 + \gamma y_{t-1} + a_2t + \sum_{i=2}^{p} \beta_i \Delta y_{t-i+1} +u_i
+$$
+
+```{r test 1 consumo, echo=FALSE}
+test_ur1_cts <- ur.df(lg_cts, type = c("trend"), selectlags = "AIC")
+summary(test_ur1_cts)
+
+```
+
+Con el estadístico $\phi_2$ observamos que no se rechaza la hipótesis nula con un nivel de significancia del 1% , esto nos dice que en la serie si esta presente la raíz unitaria pero sin drift o con tendencia.
+
+Siguiendo lo mismo, en el estadístico $\phi_3$ nos da que si hay suficiente evidencia para rechazar la hipótesis nula, con lo cuál se puede llevar a dos conclusiones:
+
+1.  Hay raíz unitaria.
+
+2.  Hay tendencia en la serie.
+
+No se puede descartar de igual modo el que esten presente las dos (1 y 2).
+
+Ahora, evaluando $\tau_3$ de los estadísticos con un valor crítico del 1%, concluimos que la serie si presenta raíz unitaria. Tomando esa consideración, se entiende que no hay estacionariedad, pero aun no se puede concluir efectivamente esto, por lo que se puede entender que el orden de integración de la serie es de orden 1, para comprobarlo, usaremos la función presente en *forecast* para determinar nuestra aseveración.
+
+\vspace{2mm}
+
+Test de verificación del orden de integración:
+
+```{r test integración consumo, echo=TRUE}
+ndiffs(lg_cts, type = c("trend"))
+
+```
+
+\vspace{1mm}
+
+Al entender que es de orden 1, usamos la primera diferencia de la serie linealizada para evaluar nuevamente la prueba DF y la función *ndiffs*:
+
+```{r test 2 consumo, echo=FALSE}
+test_ur2_dif_cts <- ur.df(dif_lg_cts, type = c("trend"), selectlags = "AIC")
+summary(test_ur2_dif_cts)
+
+```
+
+\vspace{2mm}
+
+Test de verificación del orden de integración:
+
+```{r test integración 2 consumo, echo=TRUE}
+ndiffs(dif_lg_cts, type = c("trend"))
+```
+
+# Inversión
+
+Repetimos el procedimiento anterior, usando el modelo linealizado de la inversión:
+
+```{r datos inversion, echo=FALSE}
+#******* Inversión *******#
+i_ts <- ts(db$inversion, start = 1986, frequency = 4)
+# Log(inversión)
+lg_its <- log(i_ts)
+# Primeras diferencias
+dif_lg_its <- diff(lg_its, lag = 1)
+
+```
+
+```{r test 1 inversion, echo=FALSE}
+# Test Raiz Unitario - Inversión
+test_ur1_its <- ur.df(lg_its, type = c("trend"), selectlags = "AIC")
+summary(test_ur1_its)
+
+```
+
+\vspace{3mm}
+
+Test de verificación del orden de integración:
+
+```{r integracion 1 inversion, echo=TRUE}
+ndiffs(lg_its, type = c("trend"))
+
+```
+
+Una vez mas, vemos que la serie presenta un problema de raiz unitaria con un orden de integración de orden 1, ahora, haremos la primera diferencia de nuestra serie para corregir.
+
+\vspace{1mm}
+
+```{r test 2 inversión, echo=FALSE}
+test_ur2_dif_its <- ur.df(dif_lg_its, type = c("trend"), selectlags = "AIC")
+summary(test_ur2_dif_its)
+
+```
+
+\vspace{3mm}
+
+Test de verificación del orden de integración:
+
+```{r integracion 2 inversion, echo=TRUE}
+ndiffs(dif_lg_its, type = c("trend"))
+
+```
+
+\newpage
+
+# Exportaciones
+
+Siguiendo la misma dinámica que en los apartados anteriores, comenzamos haciendo el test de DF y de *ndiffs*:
+
+```{r datos exportaciones, echo=FALSE}
+#******* Exportaciones *******#
+e_ts <- ts(db$exportaciones, start = 1986, frequency = 4)
+# Log(Exportaciones)
+lg_ets <- log(e_ts)
+# Primeras diferencias
+dif_lg_ets <- diff(lg_ets, lag = 1)
+
+```
+
+```{r test 1 exportaciones, echo=FALSE}
+# Test Raiz Unitario - Exportaciones
+test_ur1_ets <- ur.df(lg_ets, type = c("trend"), selectlags = "AIC")
+summary(test_ur1_ets)
+
+```
+
+\vspace{3mm}
+
+Test de verificación del orden de integración:
+
+```{r integracion 1 exportaciones, echo=TRUE}
+ndiffs(lg_ets, type = c("trend"))
+
+```
+
+\newpage
+
+Como ha pasado anteriormente, el orden de integración es de 1, por lo que corregiremos por diferencias:
+
+\vspace{2mm}
+
+```{r test 2 exportaciones, echo=FALSE}
+# test R.U. Dif(log(Exportaciones))
+test_ur2_dif_ets <- ur.df(dif_lg_ets, type = c("trend"), selectlags = "AIC")
+summary(test_ur2_dif_ets)
+
+```
+
+\vspace{3mm}
+
+Test de verificación del orden de integración:
+
+```{r integracion 2 exportaciones, echo=TRUE}
+ndiffs(dif_lg_ets, type = c("trend"))
+
+```
+
+\newpage
+
+# Importaciones
+
+Comenzamos nuevamente generando los la data en formato ts:
+
+```{r datos importaciones, echo=FALSE}
+#******* Importaciones *******#
+im_ts <- ts(db$importanciones, start = 1986, frequency = 4)
+# Log(Importaciones)
+lg_imts <- log(im_ts)
+# Primeras diferencias
+dif_lg_imts <- diff(lg_imts, lag = 1)
+
+```
+
+```{r test 1 importaciones, echo=FALSE}
+# Test Raiz Unitario - Importaciones
+test_ur1_imts <- ur.df(lg_imts, type = c("trend"), selectlags = "AIC")
+summary(test_ur1_imts)
+
+```
+
+\vspace{3mm}
+
+Test de verificación del orden de integración:
+
+```{r integracion 1 importaciones, echo=TRUE}
+ndiffs(lg_imts, type = c("trend"))
+
+```
+
+Nuevamente, el orden de integración es de orden 1.
+
+\newpage
+
+Ahora corregimos por diferencias.
+
+```{r test 2 importaciones, echo=FALSE}
+# test R.U. Dif(log(importaciones))
+test_ur2_dif_imts <- ur.df(dif_lg_imts, type = c("trend"), selectlags = "AIC")
+summary(test_ur2_dif_imts)
+
+```
+
+\vspace{3mm}
+
+Test de verificación del orden de integración:
+
+```{r integracion 2 importaciones, echo=TRUE}
+ndiffs(dif_lg_imts, type = c("trend"))
+
+```
+
+\newpage
+
+# PIB
+
+Por último, vemos la serie del 1986-2019:
+
+```{r datos pib, echo=FALSE}
+pib_ts <- ts(db$pib, start = 1986, frequency = 4)
+# Log(Consumo)
+lg_pibts <- log(pib_ts)
+# Primeras diferencias
+dif_lg_pibts <- diff(lg_pibts, lag = 1)
+
+```
+
+```{r test 1 pib, echo=FALSE}
+# Test Raiz Unitario - PIB
+test_ur1_pibts <- ur.df(lg_pibts, type = c("trend"), selectlags = "AIC")
+summary(test_ur1_pibts)
+
+```
+
+\vspace{3mm}
+
+Test de verificación del orden de integración:
+
+```{r integracion 1 pib, echo=TRUE}
+ndiffs(lg_pibts, type = c("trend"))
+
+```
+
+Nuevamente, vemos que el orden de integración es de 1.
+
+\newpage
+
+Finalizamos la serie corrigiendo por la diferencia.
+
+```{r test 2 pib, echo=FALSE}
+# test R.U. Dif(log(PIB))
+test_ur2_dif_pibts <- ur.df(dif_lg_pibts, type = c("trend"), selectlags = "AIC")
+summary(test_ur2_dif_pibts)
+
+```
+
+\vspace{3mm}
+
+Test de verificación del orden de integración:
+
+```{r integracion 2 pib, echo=TRUE}
+ndiffs(dif_lg_pibts, type = c("trend"))
+
+```
