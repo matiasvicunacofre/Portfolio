@@ -11,7 +11,7 @@ library(tidyverse)
 library(stargazer)
 library(wooldridge)
 library(lmtest)
-library(car)
+library(car)    
 
 # Eliminamos todo el enviroment y liberamos la memoria.
 rm(list = ls())
