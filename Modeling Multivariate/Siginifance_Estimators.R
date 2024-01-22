@@ -1,7 +1,5 @@
-#******** Ayudantía 4 - Interpretacion Significancia Estimadores ********#
-#********                Profesor: Rodrigo Ortiz                 ********#
-#********                Ayudante: Matías Vicuña                 ********#
-#********           Modelos Regresión Multivariada en R          ********#
+#******** Interpretacion Significancia Estimadores ********#
+#******** Autor: Matías Vicuña                     ********#
 
 # En caso de no poseer las librerías, correr este código
 install.packages(c("tidyverse", "stargazer", "wooldridge", "lmtest", "car"))
