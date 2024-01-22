@@ -57,7 +57,7 @@ The Data Science Laboratory of the Faculty of Economics and Business of the Albe
 
 I'm always open to collaboration and discussions within the economic and data science community. Feel free to reach out to me via:
 - [LinkedIn](https://www.linkedin.com/in/matiasvicuna/)
-- [Mail](matiasvicunacofre@gmail.com)
+- Mail (matiasvicunacofre@gmail.com)
 
 Thank you for visiting my GitHub! 🚀
 
@@ -122,6 +122,6 @@ Disfruto transformando datos en narrativas y visualizaciones significativas que 
 
 Siempre estoy abierto/a a colaboraciones y discusiones dentro de la comunidad económica y de ciencia de datos. No dudes en ponerte en contacto conmigo a través de:
 - [LinkedIn](https://www.linkedin.com/in/matiasvicuna/)
-- [Correo](matiasvicunacofre@gmail.com)
+- Correo (matiasvicunacofre@gmail.com)
 
 ¡Gracias por visitar mi GitHub! 🚀
