@@ -1,7 +1,5 @@
-#******** Ayudantía 2 - Regresión Simple ********#
-#********     Profesor: Rodrigo Ortiz     ********#
-#********     Ayudante: Matías Vicuña     ********#
-#******** Mod Regresión Multivariada en R ********#
+#******** Regresión Simple ********#
+#******** Autor: Matías Vicuña ********#
 
 # En caso de no poseer las librerías, correr este código
 install.packages(c("tidyverse", "stargazer", "wooldridge", "lmtest", "car"))
