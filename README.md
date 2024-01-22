@@ -61,7 +61,7 @@ Thank you for visiting my GitHub! 🚀
 
 ---
 
-# Matías Vicuña Cofré - Economista y Científico de Datos Novato
+# Matías Vicuña Cofré - Economista y Científico de Datos Junior
 
 (ES)
 
