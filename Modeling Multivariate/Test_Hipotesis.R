@@ -1,7 +1,5 @@
-#******** Ayudantía 1 - Test de Hipótesis ********#
-#********     Profesor: Rodrigo Ortiz     ********#
-#********     Ayudante: Matías Vicuña     ********#
-#******** Mod Regresión Multivariada en R ********#
+#******** Test de Hipótesis ********#
+#******** Autor: Matías Vicuña ********#
 
 # Librerías a usar
 library(tidyverse)
